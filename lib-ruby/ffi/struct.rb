@@ -50,6 +50,28 @@ module FFI
       self[field_name].offset
     end
 
+    class Field
+      attr_reader :offset
+      def initialize(name, offset, type)
+        if !name.is_a?(Symbol) && !name.is_a?(String)
+          raise TypeError.new "wrong argument type #{name.class} (expected Symbol/String)"
+        end
+        unless offset.is_a?(Fixnum)
+          raise TypeError.new "wrong argument type #{offset.class} (expected Fixnum)"
+        end
+        unless true # type.is_a?(Class) && (type < FFI::Type)
+          $stdout.puts type.class
+          $stdout.puts type.is_a? Class
+          raise TypeError.new "wrong argument type #{type.class} (expected FFI::Type)"
+        end
+        @name, @offset, @type = name, offset, type
+      end
+
+      def size
+        @type.size
+      end
+    end
+
     # An enum {Field} in a {StructLayout}.
     class Enum < Field
 
@@ -97,7 +119,7 @@ module FFI
     end
   end
 
-  
+
   class Struct
 
     # Get struct size
@@ -290,7 +312,7 @@ module FFI
         @packed = packed
       end
       alias :pack :packed
-      
+
       def aligned(alignment = 1)
         @min_alignment = alignment
       end

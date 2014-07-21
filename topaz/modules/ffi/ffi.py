@@ -34,6 +34,7 @@ class FFI(object):
                         space.getclassfor(W_FFIFunctionObject))
         w_FunctionType = space.getclassfor(W_FunctionTypeObject)
         space.set_const(w_mod, 'FunctionType', w_FunctionType)
+        space.set_const(w_Type, 'Function', w_FunctionType)
         space.set_const(w_mod, 'FunctionInfo', w_FunctionType)
         space.set_const(w_mod, 'CallbackInfo', w_FunctionType)
         space.set_const(w_mod, 'VariadicInvoker',
@@ -77,7 +78,18 @@ class FFI(object):
 
         # setup StructLayout
         w_struct_layout = space.newclass('StructLayout', None)
-        space.set_const(w_struct_layout, 'Field', space.w_nil)
+        w_struct_layout_field = space.newclass('Field', space.w_object)
+        space.set_const(w_struct_layout, 'Field', w_struct_layout_field)
+        space.set_const(w_struct_layout, 'Number',
+                        space.newclass('Number', w_struct_layout_field))
+        space.set_const(w_struct_layout, 'String',
+                        space.newclass('String', w_struct_layout_field))
+        space.set_const(w_struct_layout, 'Pointer',
+                        space.newclass('Pointer', w_struct_layout_field))
+        space.set_const(w_struct_layout, 'Function',
+                        space.newclass('Function', w_struct_layout_field))
+        space.set_const(w_struct_layout, 'Array',
+                        space.newclass('Array', w_struct_layout_field))
         space.set_const(w_mod, 'StructLayout', w_struct_layout)
 
         # setup StructByReference
