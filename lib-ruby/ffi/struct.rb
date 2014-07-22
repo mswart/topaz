@@ -37,6 +37,11 @@ require 'ffi/struct_layout_builder'
 module FFI
 
   class StructLayout
+    attr_reader :size
+
+    def initialize(fields, size, alignment)
+      @fields, @size, @alignment = fields, size, alignment
+    end
 
     # @return [Array<Array(Symbol, Numeric)>
     # Get an array of tuples (field name, offset of the field).
@@ -65,6 +70,10 @@ module FFI
           raise TypeError.new "wrong argument type #{type.class} (expected FFI::Type)"
         end
         @name, @offset, @type = name, offset, type
+      end
+
+      def alignment
+        size
       end
 
       def size

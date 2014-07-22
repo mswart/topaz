@@ -65,7 +65,7 @@ module FFI
 
     elsif name.is_a?(DataConverter)
       (type_map || TypeDefs)[name] = Type::Mapped.new(name)
-    
+
     else
       raise TypeError, "unable to resolve type '#{name}'"
     end
@@ -149,7 +149,7 @@ module FFI
       :varargs => Type::VARARGS,
   })
 
-  
+
   class StrPtrConverter
     extend DataConverter
     native_type Type::POINTER
@@ -186,5 +186,11 @@ module FFI
     end
     typedef :pointer, :caddr_t
   rescue Errno::ENOENT
+  end
+
+  class Type::Struct
+    def initialize(struct)
+      @struct = struct
+    end
   end
 end

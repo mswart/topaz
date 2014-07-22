@@ -124,6 +124,7 @@ class W_TypeObject(W_Object):
         return space.newbool(self.eq(w_other))
 
     @classdef.method('size')
+    @classdef.method('alignment')
     def method_size(self, space):
         r_uint_size = lltype_sizes[self.typeindex]
         size = intmask(r_uint_size)

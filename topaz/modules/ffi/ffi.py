@@ -92,6 +92,11 @@ class FFI(object):
                         space.newclass('Array', w_struct_layout_field))
         space.set_const(w_mod, 'StructLayout', w_struct_layout)
 
+        # setup StructByValue
+        w_struct_by_value = space.newclass('StructByValue', w_Type)
+        space.set_const(w_mod, 'StructByValue', w_struct_by_value)
+        space.set_const(w_Type, 'Struct', w_struct_by_value)
+
         # setup StructByReference
         w_struct_by_reference = space.newclass('StructByReference', None)
         space.set_const(w_mod, 'StructByReference', w_struct_by_reference)
