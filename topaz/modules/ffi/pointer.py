@@ -134,3 +134,13 @@ class W_PointerObject(W_AbstractMemoryObject):
     @classdef.method('type_size')
     def method_type_size(self, space):
         return space.newint(self.sizeof_type)
+
+    # TODO: improve and move to abstrace_memory
+    @classdef.method('get_bytes', offset='int', length='int')
+    def method_get_bytes(self, space, offset, length):
+        if offset + length > self.sizeof_memory:
+            return space.error(space.w_IndexError,
+                               "Address out of bounds of pointer")
+        result = rffi.cast(rffi.CCHARP, self.ptr)
+        result = rffi.charpsize2str(result, length)
+        return space.newstr_fromstr(result)

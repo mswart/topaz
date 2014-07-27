@@ -14,6 +14,7 @@ from topaz.modules.ffi.abstract_memory import W_AbstractMemoryObject
 from topaz.modules.ffi.pointer import W_PointerObject
 from topaz.modules.ffi.memory_pointer import W_MemoryPointerObject
 from topaz.modules.ffi.data_converter import DataConverter
+from topaz.modules.ffi.struct import W_StructLayout, W_StructByValue, W_Struct
 
 from rpython.rtyper.lltypesystem import rffi
 
@@ -57,7 +58,8 @@ class FFI(object):
                 space.set_const(w_mod, 'TYPE_' + typename, w_ffi_type)
                 # setup NativeType
                 space.set_const(w_native_type, typename, w_ffi_type)
-            except RubyError: pass
+            except RubyError:
+                pass
         space.set_const(w_mod, 'NativeType', w_native_type)
 
         # setup Platform
@@ -77,7 +79,7 @@ class FFI(object):
         space.set_const(w_mod, 'Platform', w_platform)
 
         # setup StructLayout
-        w_struct_layout = space.newclass('StructLayout', None)
+        w_struct_layout = space.getclassfor(W_StructLayout)
         w_struct_layout_field = space.newclass('Field', space.w_object)
         space.set_const(w_struct_layout, 'Field', w_struct_layout_field)
         space.set_const(w_struct_layout, 'Number',
@@ -93,9 +95,11 @@ class FFI(object):
         space.set_const(w_mod, 'StructLayout', w_struct_layout)
 
         # setup StructByValue
-        w_struct_by_value = space.newclass('StructByValue', w_Type)
+        w_struct_by_value = space.getclassfor(W_StructByValue)
         space.set_const(w_mod, 'StructByValue', w_struct_by_value)
         space.set_const(w_Type, 'Struct', w_struct_by_value)
+
+        space.set_const(w_mod, 'Struct', space.getclassfor(W_Struct))
 
         # setup StructByReference
         w_struct_by_reference = space.newclass('StructByReference', None)

@@ -37,11 +37,6 @@ require 'ffi/struct_layout_builder'
 module FFI
 
   class StructLayout
-    attr_reader :size
-
-    def initialize(fields, size, alignment)
-      @fields, @size, @alignment = fields, size, alignment
-    end
 
     # @return [Array<Array(Symbol, Numeric)>
     # Get an array of tuples (field name, offset of the field).
@@ -56,7 +51,7 @@ module FFI
     end
 
     class Field
-      attr_reader :offset
+      attr_reader :offset, :type, :name
       def initialize(name, offset, type)
         if !name.is_a?(Symbol) && !name.is_a?(String)
           raise TypeError.new "wrong argument type #{name.class} (expected Symbol/String)"
@@ -69,7 +64,7 @@ module FFI
           $stdout.puts type.is_a? Class
           raise TypeError.new "wrong argument type #{type.class} (expected FFI::Type)"
         end
-        @name, @offset, @type = name, offset, type
+        @name, @offset, @type = name.to_sym, offset, type
       end
 
       def alignment
@@ -204,6 +199,10 @@ module FFI
     # (see FFI::StructLayout#offsets)
     def self.offsets
       @layout.offsets
+    end
+
+    def self.layout
+      @layout.print
     end
 
     # (see FFI::StructLayout#offset_of)
