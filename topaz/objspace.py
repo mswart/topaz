@@ -377,7 +377,7 @@ class ObjectSpace(object):
 
     @specialize.argtype(1)
     def newint_or_bigint_fromunsigned(self, someunsigned):
-        #XXX somehow combine with above
+        # XXX somehow combine with above
         if 0 <= someunsigned <= sys.maxint:
             return self.newint(intmask(someunsigned))
         else:

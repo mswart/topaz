@@ -136,11 +136,11 @@ class W_FunctionTypeObject(W_TypeObject):
                 w_obj = args_w[i]
                 self._put_arg(space, data, i, w_obj)
 
-            #ec = cerrno.get_errno_container(space)
-            #cerrno.restore_errno_from(ec)
+            # ec = cerrno.get_errno_container(space)
+            # cerrno.restore_errno_from(ec)
             jit_ffi_call(self.cif_descr, rffi.cast(rffi.VOIDP, ptr), buffer)
-            #e = cerrno.get_real_errno()
-            #cerrno.save_errno_into(ec, e)
+            # e = cerrno.get_real_errno()
+            # cerrno.save_errno_into(ec, e)
 
             resultdata = rffi.ptradd(buffer, self.cif_descr.exchange_result)
             w_res = self._get_result(space, resultdata)

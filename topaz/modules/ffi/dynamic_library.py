@@ -73,6 +73,6 @@ class W_DL_SymbolObject(W_PointerObject):
     # TODO: new method should be private!
     #       or: should take an int and try to make a voidptr out of it.
 
-    #@classdef.singleton_method('allocate')
-    #def singleton_method_allocate(self, space, args_w):
-    #    return W_DL_SymbolObject(space)
+    # @classdef.singleton_method('allocate')
+    # def singleton_method_allocate(self, space, args_w):
+    #     return W_DL_SymbolObject(space)

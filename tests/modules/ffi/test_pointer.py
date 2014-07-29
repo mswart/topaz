@@ -42,7 +42,7 @@ class TestPointer__new(BaseFFITest):
         adr = llmemory.cast_ptr_to_adr(w_ptr_obj.ptr)
         assert llmemory.cast_adr_to_int(adr, mode='forced') == aint
         lltype.free(int8_ptr, flavor='raw')
-        assert not aint in ALLOCATED
+        assert aint not in ALLOCATED
 
     def test_it_also_accepts_negative_values(self, space):
         for x in range(1, 100):
@@ -64,7 +64,7 @@ class TestPointer__new(BaseFFITest):
         adr = llmemory.cast_ptr_to_adr(ptr_obj.ptr)
         assert llmemory.cast_adr_to_int(adr, mode='forced') == aint
         lltype.free(int16_ptr, flavor='raw')
-        assert not aint in ALLOCATED
+        assert aint not in ALLOCATED
 
 
 class TestPointer_size(BaseFFITest):
@@ -139,7 +139,7 @@ class TestPointer_free(BaseFFITest):
         adr = llmemory.cast_ptr_to_adr(int16_ptr)
         aint = llmemory.cast_adr_to_int(adr, mode='forced')
         space.execute("FFI::Pointer.new(%s).free" % aint)
-        assert not aint in ALLOCATED
+        assert aint not in ALLOCATED
 
 
 class TestPointer(BaseFFITest):

@@ -54,7 +54,7 @@ class TestFunction__new(BaseFFITest):
                           \{\})
         """ % libm))
 
-    #def test_it_reacts_to_messy_signature_with_TypeError(self, space):
+    # def test_it_reacts_to_messy_signature_with_TypeError(self, space):
     #    with self.raises(space, "TypeError", "unable to resolve type '1'"):
     #        space.execute("FFI::Function.new(1, [])")
     #    with self.raises(space, "TypeError", "unable to resolve type '2'"):

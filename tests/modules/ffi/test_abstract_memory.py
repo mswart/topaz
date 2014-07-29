@@ -290,7 +290,7 @@ class TestAbstractMemory(BaseFFITest):
         for prefix in signed_meths + unsigned_meths:
             assert self.ask(space, question.replace('PREFIX', prefix))
 
-#class TestAbstractMemory__put_array_of_int32(BaseFFITest):
+# class TestAbstractMemory__put_array_of_int32(BaseFFITest):
 #    def test_it_writes_into_array(self, space):
 #        w_mem_ptr = space.execute("""
 #        mem_ptr = FFI::MemoryPointer.new(:int32, 10)
@@ -333,7 +333,8 @@ class TestAbstractMemory(BaseFFITest):
 #            mem_ptr.put_array_of_int32(0, [1, 2, 3])
 #            """)
 #
-#class TestAbstractMemory__get_array_of_int32(BaseFFITest):
+#
+# class TestAbstractMemory__get_array_of_int32(BaseFFITest):
 #    def test_it_reads_from_array(self, space):
 #        w_res = space.execute("""
 #        mem_ptr = FFI::MemoryPointer.new(:int32, 10)
