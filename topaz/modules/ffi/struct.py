@@ -1,8 +1,8 @@
-from rpython.rlib.rarithmetic import intmask
 from rpython.rlib import clibffi, rgc
 from rpython.rtyper.lltypesystem import lltype, rffi
 
 from topaz.objects.objectobject import W_Object
+from topaz.objects.intobject import W_FixnumObject
 from topaz.module import ClassDef
 from topaz.modules.ffi.type import W_TypeObject, ffi_types
 from topaz.modules.ffi.pointer import W_PointerObject
@@ -36,7 +36,7 @@ class W_StructByValue(W_TypeObject):
 
     @classdef.singleton_method("allocate")
     def singleton_method_allocate(self, space):
-        return W_StructByValue(space, -1, self)
+        return W_StructByValue(space, -1, klass=self)
 
 
 class W_Struct(W_Object):
@@ -45,7 +45,7 @@ class W_Struct(W_Object):
     def __init__(self, space, klass=None):
         W_Object.__init__(self, space, klass)
         self.layout = None
-        self.ffi_struct = None
+        self.ffi_struct = lltype.nullptr(clibffi.FFI_STRUCT_P.TO)
         self.name_to_index = {}
 
     @classdef.singleton_method("allocate")
@@ -53,7 +53,7 @@ class W_Struct(W_Object):
         return W_Struct(space, self)
 
     def ensure_layout(self, space):
-        if self.layout is None: # layout not yet loaded
+        if self.layout is None:  # layout not yet loaded
             layout = space.send(space.send(self, 'class'), 'layout')
             assert isinstance(layout, W_StructLayout)
             self.layout = layout
@@ -62,7 +62,7 @@ class W_Struct(W_Object):
         return self.layout
 
     def ensure_allocated(self, space):
-        if not self.ffi_struct:
+        if self.ffi_struct == lltype.nullptr(clibffi.FFI_STRUCT_P.TO):
             layout = self.ensure_layout(space)
             # Repeated fields are delicate.  Consider for example
             #     struct { int a[5]; }
@@ -77,17 +77,18 @@ class W_Struct(W_Object):
             self.ffi_struct = clibffi.make_struct_ffitype_e(layout.size,
                                                            layout.alignment,
                                                            fieldtypes)
+        assert self.ffi_struct != lltype.nullptr(clibffi.FFI_STRUCT_P.TO)
 
     def ptroffset(self, offset):
         voidp = rffi.cast(rffi.VOIDP, self.ffi_struct.ffistruct)
-        return rffi.ptradd(voidp, offset)
+        return rffi.cast(rffi.CCHARP, rffi.ptradd(voidp, offset))
 
     @classdef.method('[]=', w_key='symbol')
     def method_subscript_assign(self, space, w_key, w_value):
         self.ensure_allocated(space)
         w_field = self.name_to_index[w_key]
         w_type = space.send(w_field, 'type')
-        offset = space.send(w_field, 'offset').intvalue
+        offset = space.int_w(space.send(w_field, 'offset'))
         return w_type.write(space, self.ptroffset(offset), w_value)
 
     @classdef.method('[]', w_key='symbol')
@@ -95,7 +96,7 @@ class W_Struct(W_Object):
         self.ensure_allocated(space)
         w_field = self.name_to_index[w_key]
         w_type = space.send(w_field, 'type')
-        offset = space.send(w_field, 'offset').intvalue
+        offset = space.send(w_field, 'offset').int_w(space)
         return w_type.read(space, self.ptroffset(offset))
 
     def __repr__(self):
@@ -116,20 +117,17 @@ class W_Struct(W_Object):
     @classdef.method('size')
     @classdef.method('alignment')
     def method_size(self, space):
-        r_uint_size = lltype_sizes[self.typeindex]
-        size = intmask(r_uint_size)
-        return space.newint(size)
+        self.ensure_layout
+        return space.newint(self.layout.size)
 
     @classdef.method('pointer')
     def method_pointer(self, space):
         self.ensure_allocated(space)
         w_pointer = W_PointerObject(space)
-        w_pointer._initialize(space, self.ffi_struct.ffistruct,
-                              space.send(self.layout, 'size'))
+        w_pointer.sizeof_type = space.int_w(space.send(self.layout, 'size'))
+        w_pointer.ptr = rffi.cast(rffi.VOIDP, self.ffi_struct.ffistruct)
+        w_pointer.sizeof_memory = w_pointer.sizeof_type
         return w_pointer
-
-    # get the corresponding ffi_type
-    ffi_struct = lltype.nullptr(clibffi.FFI_STRUCT_P.TO)
 
     @rgc.must_be_light_finalizer
     def __del__(self):
