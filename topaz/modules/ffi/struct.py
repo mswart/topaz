@@ -14,7 +14,7 @@ class W_StructLayout(W_Object):
     def method_initialize(self, space, fields, size, alignment):
         # TODO: type checks!
         self.fields = fields
-        self.size = size
+        self.struct_size = size
         self.alignment = alignment
 
     @classdef.singleton_method('allocate')
@@ -23,7 +23,7 @@ class W_StructLayout(W_Object):
 
     @classdef.method('size')
     def method_size(self, space):
-        return space.newint(self.size)
+        return space.newint(self.struct_size)
 
 
 class W_StructByValue(W_TypeObject):
@@ -73,7 +73,7 @@ class W_Struct(W_Object):
                 w_type = space.send(w_field, 'type')
                 assert isinstance(w_type, W_TypeObject)
                 fieldtypes.append(ffi_types[w_type.typeindex])
-            self.ffi_struct = clibffi.make_struct_ffitype_e(layout.size,
+            self.ffi_struct = clibffi.make_struct_ffitype_e(layout.struct_size,
                                                            layout.alignment,
                                                            fieldtypes)
         assert self.ffi_struct != lltype.nullptr(clibffi.FFI_STRUCT_P.TO)
@@ -99,13 +99,14 @@ class W_Struct(W_Object):
         return w_type.read(space, self.ptroffset(offset))
 
     def __repr__(self):
-        return '<W_StructObject ()>'
-            # % (type_names[self.typeindex], lltype_sizes[self.typeindex])
+        return '<modules.ffi.W_Struct ()>'
 
     def eq(self, w_other):
         if not isinstance(w_other, W_Struct):
             return False
-        return self.typeindex == w_other.typeindex
+        if self.layout is None or w_other.layout is None:
+            return False
+        return self.layout == w_other.layout
 
     __eq__ = eq
 
@@ -117,13 +118,13 @@ class W_Struct(W_Object):
     @classdef.method('alignment')
     def method_size(self, space):
         self.ensure_layout
-        return space.newint(self.layout.size)
+        return space.newint(self.layout.struct_size)
 
     @classdef.method('pointer')
     def method_pointer(self, space):
         self.ensure_allocated(space)
         w_pointer = W_PointerObject(space)
-        w_pointer.sizeof_type = space.int_w(space.send(self.layout, 'size'))
+        w_pointer.sizeof_type = self.layout.struct_size
         w_pointer.ptr = rffi.cast(rffi.VOIDP, self.ffi_struct.ffistruct)
         w_pointer.sizeof_memory = w_pointer.sizeof_type
         return w_pointer
