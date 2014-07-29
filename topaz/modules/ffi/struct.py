@@ -2,7 +2,6 @@ from rpython.rlib import clibffi, rgc
 from rpython.rtyper.lltypesystem import lltype, rffi
 
 from topaz.objects.objectobject import W_Object
-from topaz.objects.intobject import W_FixnumObject
 from topaz.module import ClassDef
 from topaz.modules.ffi.type import W_TypeObject, ffi_types
 from topaz.modules.ffi.pointer import W_PointerObject

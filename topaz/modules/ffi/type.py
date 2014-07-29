@@ -1,10 +1,8 @@
 from topaz.objects.objectobject import W_Object
 from topaz.module import ClassDef
-from topaz.error import RubyError
 
 from rpython.rlib.jit_libffi import FFI_TYPE_P
 from rpython.rlib import clibffi
-from rpython.rlib.rbigint import rbigint
 from rpython.rtyper.lltypesystem import rffi, lltype
 from rpython.rlib.rarithmetic import intmask
 from topaz.coerce import Coerce
@@ -12,65 +10,83 @@ from topaz.coerce import Coerce
 # XXX maybe move to rlib/jit_libffi
 from pypy.module._cffi_backend import misc
 
-_native_types = [
-    ('VOID',       clibffi.ffi_type_void,                     lltype.Void,     []),
-    ('INT8',       clibffi.ffi_type_sint8,                    rffi.CHAR,       ['CHAR', 'SCHAR']),
-    ('UINT8',      clibffi.ffi_type_uint8,                    rffi.UCHAR,      ['UCHAR']),
-    ('INT16',      clibffi.ffi_type_sint16,                   rffi.SHORT,      ['SHORT', 'SSHORT']),
-    ('UINT16',     clibffi.ffi_type_uint16,                   rffi.USHORT,     ['USHORT']),
-    ('INT32',      clibffi.ffi_type_sint32,                   rffi.INT,        ['INT', 'SINT']),
-    ('UINT32',     clibffi.ffi_type_uint32,                   rffi.UINT,       ['UINT']),
-    ('INT64',      clibffi.ffi_type_sint64,                   rffi.LONGLONG,   ['LONG_LONG', 'SLONG_LONG']),
-    ('UINT64',     clibffi.ffi_type_uint64,                   rffi.ULONGLONG,  ['ULONG_LONG']),
-    ('LONG',       clibffi.cast_type_to_ffitype(rffi.LONG),   rffi.LONG,       ['SLONG']),
-    ('ULONG',      clibffi.cast_type_to_ffitype(rffi.ULONG),  rffi.ULONG,      []),
-    ('FLOAT32',    clibffi.ffi_type_float,                    rffi.FLOAT,      ['FLOAT']),
-    ('FLOAT64',    clibffi.ffi_type_double,                   rffi.DOUBLE,     ['DOUBLE']),
-    ('LONGDOUBLE', clibffi.ffi_type_longdouble,               rffi.LONGDOUBLE, []),
-    ('POINTER',    clibffi.ffi_type_pointer,                  rffi.VOIDP,      []),
-    ('CALLBACK',   clibffi.ffi_type_pointer,                  rffi.VOIDP,      []),
-    ('FUNCTION',   clibffi.ffi_type_pointer,                  rffi.VOIDP,      []),
-    ('BUFFER_IN',),
-    ('BUFFER_OUT',),
-    ('BUFFER_INOUT',),
-    ('CHAR_ARRAY',),
-    ('BOOL',       clibffi.cast_type_to_ffitype(lltype.Bool), lltype.Bool,     []),
-    ('STRING',     clibffi.ffi_type_pointer,                  rffi.CCHARP,     []),
-    ('VARARGS',    clibffi.ffi_type_void,                     rffi.CHAR,       []),
-    ('NATIVE_VARARGS',),
-    ('NATIVE_STRUCT',),
-    ('NATIVE_ARRAY',),
-    ('NATIVE_MAPPED', clibffi.ffi_type_void,                  rffi.CCHARP,     []),
-]
-
 ffi_types = []
 type_names = []
 lltypes = []
 lltype_sizes = []
 aliases = []
 
-for i, typ in enumerate(_native_types):
-    type_names.append(typ[0])
-    globals()[typ[0]] = i
-    if len(typ) == 1:
-        ffi_types.append(lltype.nullptr(FFI_TYPE_P.TO))
-        lltype_sizes.append(0)
-        aliases.append([])
-        continue
-    ffi_types.append(typ[1])
-    lltypes.append(typ[2])
-    aliases.append(typ[3])
-    if typ[0] == 'VOID':
+
+def native(name, lltype, ffi=None, alias=[]):
+    type_names.append(name)
+    if ffi is None:
+        ffi_types.append(clibffi.cast_type_to_ffitype(lltype))
+    else:
+        ffi_types.append(ffi)
+    lltypes.append(lltype)
+    aliases.append(alias)
+    if name == 'VOID':
         lltype_sizes.append(-1)
     else:
         lltype_sizes.append(rffi.sizeof(lltypes[-1]))
+    return len(type_names) - 1
 
-del _native_types
+
+def define_unimplemented_type(name):
+    type_names.append(name)
+    ffi_types.append(lltype.nullptr(FFI_TYPE_P.TO))
+    lltype_sizes.append(0)
+    aliases.append([])
+    return len(type_names) - 1
+
+
+VOID = native('VOID', ffi=clibffi.ffi_type_void, lltype=lltype.Void)
+INT8 = native('INT8', ffi=clibffi.ffi_type_sint8,
+              lltype=rffi.CHAR, alias=['CHAR', 'SCHAR'])
+UINT8 = native('UINT8', ffi=clibffi.ffi_type_uint8,
+               lltype=rffi.UCHAR, alias=['UCHAR'])
+INT16 = native('INT16', ffi=clibffi.ffi_type_sint16,
+               lltype=rffi.SHORT, alias=['SHORT', 'SSHORT'])
+UINT16 = native('UINT16', ffi=clibffi.ffi_type_uint16,
+                lltype=rffi.USHORT, alias=['USHORT'])
+INT32 = native('INT32', ffi=clibffi.ffi_type_sint32,
+               lltype=rffi.INT, alias=['INT', 'SINT'])
+UINT32 = native('UINT32', ffi=clibffi.ffi_type_uint32,
+                lltype=rffi.UINT, alias=['UINT'])
+INT64 = native('INT64', ffi=clibffi.ffi_type_sint64,
+               lltype=rffi.LONGLONG, alias=['LONG_LONG', 'SLONG_LONG'])
+UINT64 = native('UINT64', ffi=clibffi.ffi_type_uint64,
+                lltype=rffi.ULONGLONG, alias=['ULONG_LONG'])
+LONG = native('LONG', lltype=rffi.LONG, alias=['SLONG'])
+ULONG = native('ULONG', lltype=rffi.ULONG)
+FLOAT32 = native('FLOAT32', ffi=clibffi.ffi_type_float, lltype=rffi.FLOAT,
+                 alias=['FLOAT'])
+FLOAT64 = native('FLOAT64', ffi=clibffi.ffi_type_double, lltype=rffi.DOUBLE,
+                 alias=['DOUBLE'])
+LONGDOUBLE = native('LONGDOUBLE', ffi=clibffi.ffi_type_longdouble,
+                    lltype=rffi.LONGDOUBLE)
+POINTER = native('POINTER', ffi=clibffi.ffi_type_pointer, lltype=rffi.VOIDP)
+CALLBACK = native('CALLBACK', ffi=clibffi.ffi_type_pointer, lltype=rffi.VOIDP)
+FUNCTION = native('FUNCTION', ffi=clibffi.ffi_type_pointer, lltype=rffi.VOIDP)
+BUFFER_IN = define_unimplemented_type('BUFFER_IN')
+BUFFER_OUT = define_unimplemented_type('BUFFER_OUT')
+BUFFER_INOUT = define_unimplemented_type('BUFFER_INOUT')
+CHAR_ARRAY = define_unimplemented_type('CHAR_ARRAY')
+BOOL = native('BOOL', lltype=lltype.Bool)
+STRING = native('STRING', ffi=clibffi.ffi_type_pointer, lltype=rffi.CCHARP)
+VARARGS = native('VARARGS', ffi=clibffi.ffi_type_void, lltype=rffi.CHAR)
+NATIVE_VARARGS = define_unimplemented_type('NATIVE_VARARGS')
+NATIVE_STRUCT = define_unimplemented_type('NATIVE_STRUCT')
+NATIVE_ARRAY = define_unimplemented_type('NATIVE_ARRAY')
+NATIVE_MAPPED = native('NATIVE_MAPPED', ffi=clibffi.ffi_type_void,
+                       lltype=rffi.CCHARP)
+
 
 def lltype_for_name(name):
     """NOT_RPYTHON"""
     # XXX maybe use a dictionary
     return lltypes[type_names.index(name)]
+
 
 def size_for_name(name):
     """NOT_RPYTHON"""
@@ -136,6 +152,7 @@ class W_TypeObject(W_Object):
     def write(self, space, data, w_arg):
         return self.rw_strategy.write(space, data, w_arg)
 
+
 class W_BuiltinType(W_TypeObject):
     classdef = ClassDef('Builtin', W_TypeObject.classdef)
 
@@ -146,15 +163,17 @@ class W_BuiltinType(W_TypeObject):
     def singleton_method_allocate(self, space, args_w):
         raise NotImplementedError
 
+
 def type_object(space, w_obj):
     w_ffi_mod = space.find_const(space.w_kernel, 'FFI')
     w_type = space.send(w_ffi_mod, 'find_type', [w_obj])
     if not isinstance(w_type, W_TypeObject):
         raise space.error(space.w_TypeError,
                           "This seems to be a bug. find_type should always"
-                           "return an FFI::Type object, but apparently it did"
-                           "not in this case.")
+                          "return an FFI::Type object, but apparently it did"
+                          "not in this case.")
     return w_type
+
 
 class ReadWriteStrategy(object):
     def __init__(self, typeindex):
@@ -165,6 +184,7 @@ class ReadWriteStrategy(object):
 
     def write(self, space, data, w_arg):
         raise NotImplementedError("abstract ReadWriteStrategy")
+
 
 class StringRWStrategy(ReadWriteStrategy):
     def __init__(self):
@@ -181,6 +201,7 @@ class StringRWStrategy(ReadWriteStrategy):
         arg = rffi.str2charp(arg)
         arg = rffi.cast(lltype.Unsigned, arg)
         misc.write_raw_unsigned_data(data, arg, self.typesize)
+
 
 class PointerRWStrategy(ReadWriteStrategy):
     def __init__(self):
@@ -209,6 +230,7 @@ class PointerRWStrategy(ReadWriteStrategy):
         else:
             return w_arg
 
+
 class BoolRWStrategy(ReadWriteStrategy):
     def __init__(self):
         ReadWriteStrategy.__init__(self, BOOL)
@@ -221,6 +243,7 @@ class BoolRWStrategy(ReadWriteStrategy):
         arg = space.is_true(w_arg)
         misc.write_raw_unsigned_data(data, arg, self.typesize)
 
+
 class FloatRWStrategy(ReadWriteStrategy):
     def read(self, space, data):
         result = misc.read_raw_float_data(data, self.typesize)
@@ -229,6 +252,7 @@ class FloatRWStrategy(ReadWriteStrategy):
     def write(self, space, data, w_arg):
         arg = space.float_w(w_arg)
         misc.write_raw_float_data(data, arg, self.typesize)
+
 
 class SignedRWStrategy(ReadWriteStrategy):
     def read(self, space, data):
@@ -239,6 +263,7 @@ class SignedRWStrategy(ReadWriteStrategy):
         arg = space.int_w(w_arg)
         misc.write_raw_signed_data(data, arg, self.typesize)
 
+
 class UnsignedRWStrategy(ReadWriteStrategy):
     def read(self, space, data):
         result = misc.read_raw_unsigned_data(data, self.typesize)
@@ -248,12 +273,13 @@ class UnsignedRWStrategy(ReadWriteStrategy):
         arg = space.int_w(w_arg)
         misc.write_raw_unsigned_data(data, arg, self.typesize)
 
+
 class VoidRWStrategy(ReadWriteStrategy):
     def __init__(self):
         ReadWriteStrategy.__init__(self, VOID)
 
     def read(self, space, data):
-        return space.w_nil;
+        return space.w_nil
 
     def write(self, space, data, w_arg):
         pass
@@ -280,6 +306,7 @@ rw_strategies[STRING] = StringRWStrategy()
 for t in [BUFFER_IN, BUFFER_OUT, BUFFER_INOUT]:
     rw_strategies[t] = PointerRWStrategy()
 rw_strategies[VARARGS] = VoidRWStrategy()
+
 
 class W_MappedObject(W_TypeObject):
     classdef = ClassDef('MappedObject', W_TypeObject.classdef)

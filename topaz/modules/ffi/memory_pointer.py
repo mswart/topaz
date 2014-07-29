@@ -1,9 +1,9 @@
 from topaz.modules.ffi.pointer import W_PointerObject
 from topaz.module import ClassDef
-from topaz.modules.ffi.type import W_TypeObject
 
 from rpython.rtyper.lltypesystem import rffi
 from rpython.rtyper.lltypesystem import lltype
+
 
 class W_MemoryPointerObject(W_PointerObject):
     classdef = ClassDef('FFI::MemoryPointer', W_PointerObject.classdef)

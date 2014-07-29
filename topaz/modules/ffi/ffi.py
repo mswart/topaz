@@ -1,9 +1,7 @@
 from __future__ import absolute_import
 
 from topaz.error import RubyError
-from topaz.module import ModuleDef, ClassDef
-from topaz.objects.objectobject import W_Object
-from topaz.objects.exceptionobject import W_StandardError, new_exception_allocate
+from topaz.module import ModuleDef
 from topaz.modules.ffi.type import (POINTER, lltype_sizes, W_TypeObject,
                                     type_names, W_BuiltinType)
 from topaz.modules.ffi.function import W_FFIFunctionObject
@@ -16,9 +14,8 @@ from topaz.modules.ffi.memory_pointer import W_MemoryPointerObject
 from topaz.modules.ffi.data_converter import DataConverter
 from topaz.modules.ffi.struct import W_StructLayout, W_StructByValue, W_Struct
 
-from rpython.rtyper.lltypesystem import rffi
-
 import platform
+
 
 class FFI(object):
     moduledef = ModuleDef("FFI")

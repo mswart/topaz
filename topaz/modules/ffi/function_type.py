@@ -1,5 +1,5 @@
 import sys
-from topaz.modules.ffi.type import W_TypeObject, W_MappedObject
+from topaz.modules.ffi.type import W_TypeObject
 from topaz.modules.ffi import type as ffitype
 from topaz.modules.ffi import _callback
 from topaz.module import ClassDef
@@ -14,11 +14,13 @@ from rpython.rlib import clibffi
 
 BIG_ENDIAN = sys.byteorder == 'big'
 
+
 def raise_TypeError_if_not_TypeObject(space, w_candidate):
     if not isinstance(w_candidate, W_TypeObject):
         raise space.error(space.w_TypeError,
                           "Invalid parameter type (%s)" %
                           space.str_w(space.send(w_candidate, 'inspect')))
+
 
 class W_FunctionTypeObject(W_TypeObject):
     classdef = ClassDef('FFI::FunctionType', W_TypeObject.classdef)
@@ -141,7 +143,7 @@ class W_FunctionTypeObject(W_TypeObject):
             #cerrno.save_errno_into(ec, e)
 
             resultdata = rffi.ptradd(buffer, self.cif_descr.exchange_result)
-            w_res =  self._get_result(space, resultdata)
+            w_res = self._get_result(space, resultdata)
         finally:
             lltype.free(buffer, flavor='raw')
         return w_res

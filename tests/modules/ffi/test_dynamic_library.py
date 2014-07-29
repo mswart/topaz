@@ -10,12 +10,14 @@ if sys.platform == 'darwin':
 else:
     libm = 'libm.so'
 
+
 class TestDynamicLibrary(BaseFFITest):
     def test_consts(self, space):
-        consts = {'LAZY':1 , 'NOW':2, 'GLOBAL':257, 'LOCAL':0}
+        consts = {'LAZY': 1, 'NOW': 2, 'GLOBAL': 257, 'LOCAL': 0}
         for name in consts:
             w_res = space.execute('FFI::DynamicLibrary::RTLD_%s' % name)
             space.int_w(w_res) == consts[name]
+
 
 class TestDynamicLibrary__new(BaseFFITest):
     def test_it_opens_a_dynamic_library(self, space):
@@ -54,11 +56,13 @@ class TestDynamicLibrary__new(BaseFFITest):
         assert self.ask(space, "FFI::DynamicLibrary.method(:new) =="
                                "FFI::DynamicLibrary.method(:open)")
 
+
 class TestDynamicLibrary__Symbol(BaseFFITest):
     def test_its_a_wrapper_around_a_function_symbol(self, space):
-        exp_ptr = clibffi.CDLL( libm).getaddressindll('exp')
+        exp_ptr = clibffi.CDLL(libm).getaddressindll('exp')
         w_dl_sym = W_DL_SymbolObject(space, exp_ptr)
         assert w_dl_sym.ptr == exp_ptr
+
 
 class TestDynamicLibrary_find_variable(BaseFFITest):
     def test_it_returns_a_DynamicLibrary__Symbol(self, space):
@@ -72,4 +76,4 @@ class TestDynamicLibrary_find_variable(BaseFFITest):
         assert self.ask(space, """
         dl = FFI::DynamicLibrary.new('%s')
         dl.method(:find_function) == dl.method(:find_variable)
-        """ % libm) 
+        """ % libm)

@@ -1,13 +1,9 @@
+from rpython.rlib import jit
+
 from topaz.module import ClassDef
 from topaz.objects.objectobject import W_Object
-from topaz.modules.ffi.type import type_object, ffi_types, W_TypeObject, VOID
-from topaz.modules.ffi.dynamic_library import coerce_dl_symbol
-from topaz.modules.ffi.function_type import W_FunctionTypeObject
 from topaz.modules.ffi.function import W_FFIFunctionObject
 
-from rpython.rlib import clibffi
-from rpython.rlib import jit
-from rpython.rtyper.lltypesystem import lltype, rffi
 
 class W_VariadicInvokerObject(W_Object):
     classdef = ClassDef('VariadicInvoker', W_Object.classdef)

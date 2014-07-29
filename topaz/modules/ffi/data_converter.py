@@ -1,6 +1,7 @@
 from topaz.module import ModuleDef
 from topaz.modules.ffi.type import type_object
 
+
 # A rather abstract base class
 class DataConverter(object):
     moduledef = ModuleDef('FFI::DataConverter')

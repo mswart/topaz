@@ -382,7 +382,7 @@ class ObjectSpace(object):
             return self.newint(intmask(someunsigned))
         else:
             return self.newbigint_fromrbigint(
-                        rbigint.fromrarith_int(someunsigned))
+                rbigint.fromrarith_int(someunsigned))
 
     def newfloat(self, floatvalue):
         return W_FloatObject(self, floatvalue)

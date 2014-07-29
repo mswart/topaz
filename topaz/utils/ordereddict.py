@@ -1,5 +1,4 @@
 import operator
-import copy
 from collections import OrderedDict as PyOrderedDict
 
 from rpython.annotator import model
