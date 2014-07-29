@@ -12,11 +12,12 @@ from .base import BaseTest
 
 class Test(BaseTest):
     def __init__(self, func, deps=[], needs_rpython=True, needs_rubyspec=False,
-                 create_build=False):
+                 create_build=False, needs_pytest=False):
         super(Test, self).__init__()
         self.func = func
         self.deps = deps
         self.needs_rpython = needs_rpython
+        self.needs_pytest = needs_pytest
         self.needs_rubyspec = needs_rubyspec
         self.create_build = create_build
 
@@ -36,6 +37,10 @@ class Test(BaseTest):
         if self.needs_rpython:
             with open("rpython_marker") as f:
                 env["rpython_path"] = f.read()
+        if self.needs_pytest:
+            result = invoke.run('python -c "import pytest, os.path; print(os.path.dirname(pytest.__file__))"',
+                                hide=True)
+            env['pytest_path'] = result.stdout.strip()
         self.func(env)
 
     def upload_build(self):
@@ -99,7 +104,7 @@ def upload_build():
 
 
 def run_own_tests(env):
-    invoke.run("PYTHONPATH=$PYTHONPATH:{rpython_path} py.test".format(**env))
+    invoke.run("PYTHONPATH=$PYTHONPATH:{pytest_path}:{rpython_path} py.test".format(**env))
 
 
 def run_rubyspec_untranslated(env):
@@ -114,7 +119,7 @@ def run_translate_tests(env):
 def run_translate_jit_tests(env):
     invoke.run("PYTHONPATH={rpython_path}:$PYTHONPATH python {rpython_path}/rpython/bin/rpython --batch -Ojit targettopaz.py".format(**env))
     run_specs("`pwd`/bin/topaz")
-    invoke.run("PYTHONPATH={rpython_path}:$PYTHONPATH py.test --topaz=bin/topaz tests/jit/".format(**env))
+    invoke.run("PYTHONPATH={pytest_path}:{rpython_path}:$PYTHONPATH py.test --topaz=bin/topaz tests/jit/".format(**env))
 
 
 def run_specs(binary, prefix=""):
@@ -139,10 +144,10 @@ def run_flake8_tests(env):
 
 
 TEST_TYPES = {
-    "own": Test(run_own_tests, deps=["-r requirements.txt"]),
+    "own": Test(run_own_tests, deps=["-r requirements.txt"], needs_pytest=True),
     "rubyspec_untranslated": Test(run_rubyspec_untranslated, deps=["-r requirements.txt"], needs_rubyspec=True),
     "translate": Test(run_translate_tests, deps=["-r requirements.txt"], needs_rubyspec=True),
-    "translate-jit": Test(run_translate_jit_tests, deps=["-r requirements.txt"], needs_rubyspec=True, create_build=True),
+    "translate-jit": Test(run_translate_jit_tests, deps=["-r requirements.txt"], needs_rubyspec=True, needs_pytest=True, create_build=True),
     "docs": Test(run_docs_tests, deps=["sphinx"], needs_rpython=False),
     "flake8": Test(run_flake8_tests, deps=["flake8"], needs_rpython=False),
 }
