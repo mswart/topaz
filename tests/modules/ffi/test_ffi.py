@@ -44,7 +44,7 @@ class TestStructLayout(BaseFFITest):
         assert self.ask(space, "FFI::StructLayout.is_a? Class")
 
     def test_its_Field_constant_is_nil(self, space):
-        assert self.ask(space, "FFI::StructLayout::Field.nil?")
+        assert self.ask(space, "FFI::StructLayout::Field.is_a? Class")
 
 
 class TestStructByReference(BaseFFITest):
