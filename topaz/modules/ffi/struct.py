@@ -44,42 +44,53 @@ class W_Struct(W_Object):
     def __init__(self, space, klass=None):
         W_Object.__init__(self, space, klass)
         self.layout = None
-        self.ffi_struct = lltype.nullptr(clibffi.FFI_STRUCT_P.TO)
+        self.pointer = None
+        self.self_allocated = True
         self.name_to_index = {}
 
     @classdef.singleton_method("allocate")
     def singleton_method_allocate(self, space):
         return W_Struct(space, self)
 
+    @classdef.method('initialize')
+    def method_initialize(self, space, w_pointer=None):
+        if w_pointer is not None and w_pointer is not space.w_nil:
+            if not isinstance(w_pointer, W_PointerObject):
+                raise space.error(space.w_TypeError, 'PointerObject needed!')
+            self.ensure_layout(space)
+            self.pointer = w_pointer
+            self.self_allocated = False
+
     def ensure_layout(self, space):
         if self.layout is None:  # layout not yet loaded
             layout = space.send(space.send(self, 'class'), 'layout')
-            assert isinstance(layout, W_StructLayout)
+            if not isinstance(layout, W_StructLayout):
+                raise space.error(space.w_TypeError, 'Struct needs StructLayout not %s' % space.getclass(layout).name)
             self.layout = layout
             for w_field in layout.fields:
                 self.name_to_index[space.send(w_field, 'name')] = w_field
         return self.layout
 
     def ensure_allocated(self, space):
-        if self.ffi_struct == lltype.nullptr(clibffi.FFI_STRUCT_P.TO):
+        if self.pointer is None:
             layout = self.ensure_layout(space)
-            # Repeated fields are delicate.  Consider for example
-            #     struct { int a[5]; }
-            # or  struct { struct {int x;} a[5]; }
-            # Seeing no corresponding doc in clibffi, let's just repeat
-            # the field 5 times...
             fieldtypes = []
             for w_field in layout.fields:
                 w_type = space.send(w_field, 'type')
                 assert isinstance(w_type, W_TypeObject)
                 fieldtypes.append(ffi_types[w_type.typeindex])
-            self.ffi_struct = clibffi.make_struct_ffitype_e(layout.struct_size,
-                                                           layout.alignment,
-                                                           fieldtypes)
-        assert self.ffi_struct != lltype.nullptr(clibffi.FFI_STRUCT_P.TO)
+            ffi_struct = clibffi.make_struct_ffitype_e(layout.struct_size,
+                                                       layout.alignment,
+                                                       fieldtypes)
+            w_pointer = W_PointerObject(space)
+            w_pointer.sizeof_type = self.layout.struct_size
+            w_pointer.ptr = rffi.cast(rffi.VOIDP, ffi_struct)
+            w_pointer.sizeof_memory = w_pointer.sizeof_type
+            self.pointer = w_pointer
+        return self.pointer
 
     def ptroffset(self, offset):
-        voidp = rffi.cast(rffi.VOIDP, self.ffi_struct.ffistruct)
+        voidp = rffi.cast(rffi.VOIDP, self.pointer.ptr)
         return rffi.cast(rffi.CCHARP, rffi.ptradd(voidp, offset))
 
     @classdef.method('[]=', w_key='symbol')
@@ -122,14 +133,14 @@ class W_Struct(W_Object):
 
     @classdef.method('pointer')
     def method_pointer(self, space):
-        self.ensure_allocated(space)
-        w_pointer = W_PointerObject(space)
-        w_pointer.sizeof_type = self.layout.struct_size
-        w_pointer.ptr = rffi.cast(rffi.VOIDP, self.ffi_struct.ffistruct)
-        w_pointer.sizeof_memory = w_pointer.sizeof_type
-        return w_pointer
+        return self.ensure_allocated(space)
 
-    @rgc.must_be_light_finalizer
+    @classdef.method('free')
+    def method_free(self, space):
+        self.__del__()
+        self.pointer = None
+
+    # TODO: possible to get it @rgc.must_be_light_finalizer again?
     def __del__(self):
-        if self.ffi_struct:
-            lltype.free(self.ffi_struct, flavor='raw')
+        if self.self_allocated and self.pointer is not None:
+            lltype.free(self.pointer.ptr, flavor='raw')
