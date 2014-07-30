@@ -1,3 +1,5 @@
+import sys
+
 from topaz.modules.ffi.abstract_memory import W_AbstractMemoryObject
 from topaz.module import ClassDef
 from topaz.coerce import Coerce
@@ -5,7 +7,8 @@ from topaz.coerce import Coerce
 from rpython.rtyper.lltypesystem import rffi
 from rpython.rtyper.lltypesystem import lltype
 
-import sys
+# XXX maybe move to rlib/jit_libffi
+from pypy.module._cffi_backend import misc
 
 NULLPTR = lltype.nullptr(rffi.VOIDP.TO)
 
@@ -142,9 +145,37 @@ class W_PointerObject(W_AbstractMemoryObject):
     @classdef.method('get_bytes', offset='int', length='int')
     def method_get_bytes(self, space, offset, length):
         if offset + length > self.sizeof_memory:
-            return space.w_nil
-            # return space.error(space.w_IndexError,
-            #                    "Address out of bounds of pointer")
+            raise space.error(space.w_IndexError,
+                              "Address out of bounds of pointer")
+        if self.ptr == NULLPTR:
+            raise space.error(space.w_IndexError,
+                              "Try to access NullPointer")
         result = rffi.cast(rffi.CCHARP, self.ptr)
         result = rffi.charpsize2str(result, length)
+        return space.newstr_fromstr(result)
+
+    # TODO: improve and move to abstrace_memory
+    @classdef.method('put_bytes', offset='int', offset2='int', length='int')
+    def method_put_bytes(self, space, offset, w_data, offset2, length):
+        if offset + length > self.sizeof_memory:
+            raise space.error(space.w_IndexError,
+                              "Address out of bounds of pointer")
+        if self.ptr == NULLPTR:
+            raise space.error(space.w_IndexError,
+                              "Try to access NullPointer")
+        w_data = space.convert_type(w_data, space.w_string, 'to_s')
+        from rpython.rtyper.lltypesystem.rstr import copy_string_to_raw
+        from rpython.rtyper.annlowlevel import llstr as llstrtype
+        ll_s = llstrtype(space.str_w(w_data))
+        ptr = rffi.cast(rffi.CCHARP, self.ptr)
+        copy_string_to_raw(ll_s, ptr, 0, length)
+
+    # TODO: improve and move to abstrace_memory
+    @classdef.method('get_string', offset='int')
+    def method_get_string(self, space, offset=0):
+        if self.ptr == NULLPTR:
+            raise space.error(space.w_IndexError,
+                              "Try to access NullPointer")
+        result = rffi.cast(rffi.CCHARP, self.ptr)
+        result = rffi.charp2str(result)
         return space.newstr_fromstr(result)
