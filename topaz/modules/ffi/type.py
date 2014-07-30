@@ -197,6 +197,7 @@ class StringRWStrategy(ReadWriteStrategy):
         return space.newstr_fromstr(result)
 
     def write(self, space, data, w_arg):
+        w_arg = space.convert_type(w_arg, space.w_string, 'to_s')
         arg = space.str_w(w_arg)
         arg = rffi.str2charp(arg)
         arg = rffi.cast(lltype.Unsigned, arg)
@@ -260,6 +261,7 @@ class SignedRWStrategy(ReadWriteStrategy):
         return space.newint(intmask(result))
 
     def write(self, space, data, w_arg):
+        w_arg = space.convert_type(w_arg, space.w_integer, 'to_i')
         arg = space.int_w(w_arg)
         misc.write_raw_signed_data(data, arg, self.typesize)
 
