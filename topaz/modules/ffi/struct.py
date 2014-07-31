@@ -1,4 +1,4 @@
-from rpython.rlib import clibffi, rgc
+from rpython.rlib import clibffi
 from rpython.rtyper.lltypesystem import lltype, rffi
 
 from topaz.objects.objectobject import W_Object

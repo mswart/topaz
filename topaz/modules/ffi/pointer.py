@@ -7,8 +7,6 @@ from topaz.coerce import Coerce
 from rpython.rtyper.lltypesystem import rffi
 from rpython.rtyper.lltypesystem import lltype
 
-# XXX maybe move to rlib/jit_libffi
-from pypy.module._cffi_backend import misc
 
 NULLPTR = lltype.nullptr(rffi.VOIDP.TO)
 
