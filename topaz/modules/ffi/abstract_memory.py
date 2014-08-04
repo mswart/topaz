@@ -5,11 +5,22 @@ from rpython.rtyper.lltypesystem import rffi, lltype
 from topaz.modules.ffi import type as ffitype
 
 
+NULLPTR = lltype.nullptr(rffi.VOIDP.TO)
+
+
+def ensure_no_nullpointer(space, ptr):
+    if ptr == NULLPTR:
+        w_FFI = space.find_const(space.w_kernel, 'FFI')
+        w_NullPointerError = space.find_const(w_FFI, 'NullPointerError')
+        raise space.error(w_NullPointerError, 'Try to read null pointer')
+
+
 def new_put_method(typeindex):
     rw_strategy = ffitype.rw_strategies[typeindex]
     sizeof_type = ffitype.lltype_sizes[typeindex]
 
     def put_method(self, space, offset, w_value):
+        ensure_no_nullpointer(space, self.ptr)
         offset_ptr = rffi.ptradd(rffi.cast(rffi.CCHARP, self.ptr), offset)
         raise_if_out_of_bounds(space, offset, self.sizeof_memory, sizeof_type)
         rw_strategy.write(space, offset_ptr, w_value)
@@ -21,6 +32,7 @@ def new_get_method(typeindex):
     sizeof_type = ffitype.lltype_sizes[typeindex]
 
     def get_method(self, space, offset):
+        ensure_no_nullpointer(space, self.ptr)
         offset_ptr = rffi.ptradd(rffi.cast(rffi.CCHARP, self.ptr), offset)
         raise_if_out_of_bounds(space, offset, self.sizeof_memory, sizeof_type)
         return rw_strategy.read(space, offset_ptr)
