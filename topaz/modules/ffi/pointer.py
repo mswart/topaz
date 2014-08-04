@@ -56,7 +56,7 @@ class W_PointerObject(W_AbstractMemoryObject):
 
     @classdef.singleton_method('allocate')
     def singleton_method_allocate(self, space):
-        return W_PointerObject(space)
+        return W_PointerObject(space, self)
 
     @classdef.method('initialize')
     def method_initialize(self, space, args_w):

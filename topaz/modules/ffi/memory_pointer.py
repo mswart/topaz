@@ -8,8 +8,8 @@ from rpython.rtyper.lltypesystem import lltype
 class W_MemoryPointerObject(W_PointerObject):
     classdef = ClassDef('FFI::MemoryPointer', W_PointerObject.classdef)
 
-    def __init__(self, space):
-        W_PointerObject.__init__(self, space)
+    def __init__(self, space, klass=None):
+        W_PointerObject.__init__(self, space, klass)
         self.w_type = None
 
     def __del__(self):
@@ -17,7 +17,7 @@ class W_MemoryPointerObject(W_PointerObject):
 
     @classdef.singleton_method('allocate')
     def singleton_method_allocate(self, space, args_w):
-        return W_MemoryPointerObject(space)
+        return W_MemoryPointerObject(space, self)
 
     @classdef.method('initialize', size='int')
     def method_initialize(self, space, w_type_hint, size=1, block=None):
