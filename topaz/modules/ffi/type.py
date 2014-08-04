@@ -241,6 +241,8 @@ class BoolRWStrategy(ReadWriteStrategy):
         return space.newbool(result)
 
     def write(self, space, data, w_arg):
+        if w_arg not in [space.w_true, space.w_false]:
+            raise space.error(space.w_TypeError, 'Expected boolean value')
         arg = space.is_true(w_arg)
         misc.write_raw_unsigned_data(data, arg, self.typesize)
 
