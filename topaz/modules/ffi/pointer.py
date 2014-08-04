@@ -46,12 +46,14 @@ class W_PointerObject(W_AbstractMemoryObject):
         W_AbstractMemoryObject.__init__(self, space, klass)
         self.sizeof_type = 0
         self.sizeof_memory = 0
+        self.autorelease = False
 
     def __deepcopy__(self, memo):
         obj = super(W_AbstractMemoryObject, self).__deepcopy__(memo)
         obj.ptr = self.ptr
         obj.sizeof_type = self.sizeof_type
         obj.sizeof_memory = self.sizeof_memory
+        obj.autorelease = self.autorelease
         return obj
 
     @classdef.singleton_method('allocate')
@@ -112,7 +114,7 @@ class W_PointerObject(W_AbstractMemoryObject):
         ptr = rffi.ptradd(rffi.cast(rffi.CCHARP, self.ptr), other)
         ptr_val = rffi.cast(lltype.Unsigned, ptr)
         w_ptr_val = space.newint_or_bigint_fromunsigned(ptr_val)
-        w_res = space.send(space.getclass(self), 'new', [w_ptr_val])
+        w_res = space.send(space.getclassfor(W_PointerObject), 'new', [w_ptr_val])
         return w_res
 
     @classdef.method('slice', size='int')
