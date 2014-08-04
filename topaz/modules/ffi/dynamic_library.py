@@ -21,6 +21,7 @@ class W_DynamicLibraryObject(W_Object):
         w_cls.attach_method(space, 'open', w_method_new)
         space.send(w_cls, 'alias_method', [space.newsymbol('find_function'),
                                            space.newsymbol('find_variable')])
+        space.send(w_cls, 'attr_reader', [space.newsymbol('name')])
 
     def __init__(self, space, name, flags, klass=None):
         W_Object.__init__(self, space, klass)
@@ -50,7 +51,10 @@ class W_DynamicLibraryObject(W_Object):
 
     @classdef.method('find_variable', name='symbol')
     def method_find_variable(self, space, name):
-        funcsym = self.cdll.getaddressindll(name)
+        try:
+            funcsym = self.cdll.getaddressindll(name)
+        except KeyError:  # name not found
+            return space.w_nil
         return W_DL_SymbolObject(space, funcsym)
 
 
