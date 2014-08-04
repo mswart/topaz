@@ -29,6 +29,8 @@ class W_MemoryPointerObject(W_PointerObject):
             self.sizeof_memory = size * sizeof_type
         elif space.is_kind_of(w_type_hint, space.w_fixnum):
             self.sizeof_memory = space.int_w(w_type_hint)
+        else:
+            raise space.error(space.w_TypeError, 'need symbol as type hint or memory size')
         memory = lltype.malloc(rffi.CArray(rffi.CHAR),
                                self.sizeof_memory,
                                flavor='raw', zero=True)
