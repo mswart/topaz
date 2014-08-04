@@ -192,6 +192,8 @@ class StringRWStrategy(ReadWriteStrategy):
 
     def read(self, space, data):
         result = misc.read_raw_unsigned_data(data, self.typesize)
+        if result == 0:
+            return space.w_nil
         result = rffi.cast(rffi.CCHARP, result)
         result = rffi.charp2str(result)
         return space.newstr_fromstr(result)
@@ -199,6 +201,8 @@ class StringRWStrategy(ReadWriteStrategy):
     def write(self, space, data, w_arg):
         w_arg = space.convert_type(w_arg, space.w_string, 'to_s')
         arg = space.str_w(w_arg)
+        if "\0" in arg:
+            raise space.error(space.w_TypeError, 'String can not contain null character')
         arg = rffi.str2charp(arg)
         arg = rffi.cast(lltype.Unsigned, arg)
         misc.write_raw_unsigned_data(data, arg, self.typesize)
