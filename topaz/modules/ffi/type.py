@@ -147,9 +147,13 @@ class W_TypeObject(W_Object):
         return space.newint(size)
 
     def read(self, space, data):
+        if self.rw_strategy is None:  # should not happen
+            raise space.error(space.w_NotImplementedError, 'Type(%s) not full implemented' % self)
         return self.rw_strategy.read(space, data)
 
     def write(self, space, data, w_arg):
+        if self.rw_strategy is None:  # should not happen
+            raise space.error(space.w_NotImplementedError, 'Type(%s) not full implemented' % self)
         return self.rw_strategy.write(space, data, w_arg)
 
 
