@@ -9,6 +9,7 @@ from topaz.modules.ffi.function_type import W_FunctionTypeObject
 from topaz.modules.ffi.variadic_invoker import W_VariadicInvokerObject
 from topaz.modules.ffi.dynamic_library import W_DynamicLibraryObject
 from topaz.modules.ffi.abstract_memory import W_AbstractMemoryObject
+from topaz.modules.ffi.buffer import W_BufferObject
 from topaz.modules.ffi.pointer import W_PointerObject
 from topaz.modules.ffi.memory_pointer import W_MemoryPointerObject
 from topaz.modules.ffi.data_converter import DataConverter
@@ -39,6 +40,8 @@ class FFI(object):
                         space.getclassfor(W_VariadicInvokerObject))
         space.set_const(w_mod, 'AbstractMemory',
                         space.getclassfor(W_AbstractMemoryObject))
+        space.set_const(w_mod, 'Buffer',
+                        space.getclassfor(W_BufferObject))
         space.set_const(w_mod, 'Pointer',
                         space.getclassfor(W_PointerObject))
         space.set_const(w_mod, 'MemoryPointer',
