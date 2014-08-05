@@ -24,6 +24,7 @@ def new_put_method(typeindex):
         offset_ptr = rffi.ptradd(rffi.cast(rffi.CCHARP, self.ptr), offset)
         raise_if_out_of_bounds(space, offset, self.sizeof_memory, sizeof_type)
         rw_strategy.write(space, offset_ptr, w_value)
+        return self
     return put_method
 
 
@@ -44,6 +45,7 @@ def new_write_method(type_str):
 
     def write_method(self, space, w_value):
         space.send(self, put_method_name, [space.newint(0), w_value])
+        return self
     return write_method
 
 
@@ -94,6 +96,54 @@ class W_AbstractMemoryObject(W_Object):
                 space.send(w_cls, 'alias_method',
                            [space.newsymbol(prefix + alias),
                             space.newsymbol(prefix + orig)])
+
+    def ptroffset(self, offset):
+        voidp = rffi.cast(rffi.VOIDP, self.ptr)
+        return rffi.cast(rffi.CCHARP, rffi.ptradd(voidp, offset))
+
+    @classdef.method('get_bytes', offset='int', length='int')
+    def method_get_bytes(self, space, offset, length):
+        if offset + length > self.sizeof_memory:
+            raise space.error(space.w_IndexError,
+                              "Address out of bounds of pointer")
+        if self.ptr == NULLPTR:
+            raise space.error(space.w_IndexError,
+                              "Try to access NullPointer")
+        result = rffi.charpsize2str(self.ptroffset(offset), length)
+        return space.newstr_fromstr(result)
+
+    @classdef.method('put_bytes', pointer_offset='int', str_offset='int', length='int')
+    def method_put_bytes(self, space, pointer_offset, w_data, str_offset=0, length=None):
+        if self.ptr == NULLPTR:
+            raise space.error(space.w_IndexError,
+                              "Try to access NullPointer")
+        if str_offset < 0:
+            raise space.error(space.w_RangeError, 'index+length is greater than size of string')
+        # convert to c str
+        w_data = space.convert_type(w_data, space.w_string, 'to_s')
+        from rpython.rtyper.lltypesystem.rstr import copy_string_to_raw
+        from rpython.rtyper.annlowlevel import llstr as llstrtype
+        str_w = space.str_w(w_data)
+        if length is None:
+            length = len(str_w) - str_offset
+        if str_offset + length > len(str_w):
+            raise space.error(space.w_RangeError, 'index+length is greater than size of string')
+        if length < 0:
+            raise space.error(space.w_IndexError, 'Length to small')
+        if pointer_offset + length > self.sizeof_memory:
+            raise space.error(space.w_IndexError,
+                              "Address out of bounds of pointer")
+        copy_string_to_raw(llstrtype(str_w), self.ptroffset(pointer_offset), str_offset, length)
+        return self
+
+    @classdef.method('get_string', offset='int')
+    def method_get_string(self, space, offset=0):
+        if self.ptr == NULLPTR:
+            raise space.error(space.w_IndexError,
+                              "Try to access NullPointer")
+        result = rffi.charp2str(self.ptroffset(offset))
+        return space.newstr_fromstr(result)
+
 
 W_AMO = W_AbstractMemoryObject
 for t in [ffitype.INT8, ffitype.INT16, ffitype.INT32, ffitype.INT64,
