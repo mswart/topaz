@@ -16,8 +16,8 @@
 require 'ffi'
 
 module TestLibrary
-  #PATH = "build/libtest.#{FFI::Platform::LIBSUFFIX}"
-  PATH = "/home/gerd/Programmierung/topaz/spec/testffi/build/libtest.#{FFI::Platform::LIBSUFFIX}"
+  BASE_DIR = File.join(File.dirname(__FILE__), "..", "..", "tests", "fixtures")
+  PATH = File.join(BASE_DIR, "build", "libtest.#{FFI::Platform::LIBSUFFIX}")
   def self.force_gc
    # if RUBY_PLATFORM =~ /java/
    #   java.lang.System.gc
@@ -28,6 +28,11 @@ module TestLibrary
    # end
   end
 end
+
+unless File.exists? TestLibrary::PATH
+  puts `make -C #{TestLibrary::BASE_DIR} -f libtest/GNUmakefile`
+end
+
 module LibTest
   extend FFI::Library
   ffi_lib TestLibrary::PATH

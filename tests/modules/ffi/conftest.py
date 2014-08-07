@@ -15,7 +15,7 @@ def pytest_funcarg__ffis(request, space):
 
 def pytest_funcarg__libtest_so():
     ext = 'dylib' if sys.platform == 'darwin' else 'so'
-    self_dir = os.path.join(os.path.dirname(__file__))
+    self_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'fixtures'))
     makefile = os.path.join('libtest', 'GNUmakefile')
     subprocess.call(["make", "-f", makefile], cwd=self_dir)
     rel_to_libtest_so = os.path.join('build', 'libtest.' + ext)

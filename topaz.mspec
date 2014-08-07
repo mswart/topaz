@@ -112,10 +112,13 @@ class MSpecScript
     "^#{Rubyspec}/library/zlib/"
   ]
 
+  ffi = ["#{Topaz}/spec/ffi"]
+
   set :tags_patterns, [
+      [/#{Topaz}\/spec/, "#{Topaz}/spec/tags"],
       [/#{Rubyspec}/, "#{Topaz}/spec/tags"],
       [/_spec.rb$/, '_tags.txt']
   ]
 
-  set :files, core + language + library + command_line
+  set :files, core + language + library + command_line + ffi
 end
