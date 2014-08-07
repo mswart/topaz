@@ -1,9 +1,10 @@
-from topaz.objects.objectobject import W_Object
-from topaz.module import ClassDef
 from rpython.rtyper.lltypesystem import rffi, lltype
 
-from topaz.modules.ffi import type as ffitype
+from topaz.objects.objectobject import W_Object
+from topaz.module import ClassDef
+from topaz.coerce import Coerce
 
+from topaz.modules.ffi import type as ffitype
 
 NULLPTR = lltype.nullptr(rffi.VOIDP.TO)
 
@@ -112,8 +113,8 @@ class W_AbstractMemoryObject(W_Object):
         result = rffi.charpsize2str(self.ptroffset(offset), length)
         return space.newstr_fromstr(result)
 
-    @classdef.method('put_bytes', pointer_offset='int', str_offset='int', length='int')
-    def method_put_bytes(self, space, pointer_offset, w_data, str_offset=0, length=None):
+    @classdef.method('put_bytes', pointer_offset='int', str_offset='int')
+    def method_put_bytes(self, space, pointer_offset, w_data, str_offset=0, w_length=None):
         if self.ptr == NULLPTR:
             raise space.error(space.w_IndexError,
                               "Try to access NullPointer")
@@ -124,8 +125,10 @@ class W_AbstractMemoryObject(W_Object):
         from rpython.rtyper.lltypesystem.rstr import copy_string_to_raw
         from rpython.rtyper.annlowlevel import llstr as llstrtype
         str_w = space.str_w(w_data)
-        if length is None:
+        if w_length is None:
             length = len(str_w) - str_offset
+        else:
+            length = Coerce.int(space, w_length)
         if str_offset + length > len(str_w):
             raise space.error(space.w_RangeError, 'index+length is greater than size of string')
         if length < 0:
