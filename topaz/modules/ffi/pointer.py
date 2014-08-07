@@ -12,7 +12,7 @@ NULLPTR = lltype.nullptr(rffi.VOIDP.TO)
 
 
 def coerce_pointer(space, w_pointer):
-    if isinstance(w_pointer, W_PointerObject):
+    if isinstance(w_pointer, W_AbstractMemoryObject):
         return w_pointer.ptr
     else:
         raise space.error(space.w_TypeError,
@@ -28,7 +28,7 @@ def coerce_address(space, w_addressable):
     elif space.is_kind_of(w_addressable, space.w_fixnum):
         return Coerce.int(space, w_addressable)
     elif space.is_kind_of(w_addressable,
-                          space.getclassfor(W_PointerObject)):
+                          space.getclassfor(W_AbstractMemoryObject)):
         w_address = space.send(w_addressable, 'address')
         return coerce_address(space, w_address)
     else:
