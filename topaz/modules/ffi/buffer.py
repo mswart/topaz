@@ -44,8 +44,7 @@ class W_BufferObject(W_AbstractMemoryObject):
         self.sizeof_memory = self.sizeof_type * count
         memory = lltype.malloc(rffi.CArray(rffi.CHAR),
                                self.sizeof_memory,
-                               flavor='raw', zero=True)
-                               # zero=clear, but lltype seams to not support that
+                               flavor='raw', zero=True)  # zero=clear, but lltype seams to not support that
         self.ptr = rffi.cast(rffi.VOIDP, memory)
         if block is not None:
             return space.invoke_block(block, [self])
