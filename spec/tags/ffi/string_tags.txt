@@ -1,0 +1,3 @@
+fails:String tests MemoryPointer#get_string returns a tainted string
+fails:String tests String returned by a method is tainted
+fails:String tests casts nil as NULL pointer
