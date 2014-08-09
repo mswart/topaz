@@ -330,11 +330,14 @@ module FFI
         # If it is a global struct, just attach directly to the pointer
         s = type.new(address)
         self.module_eval <<-code, __FILE__, __LINE__
-          @@ffi_gvar_#{mname} = s
+          def self.__tmp__set_#{mname}(v)
+            @@ffi_gvar_#{mname} = v
+          end
           def self.#{mname}
             @@ffi_gvar_#{mname}
           end
         code
+        self.send :"__tmp__set_#{mname}", s
 
       else
         sc = Class.new(FFI::Struct)
@@ -344,7 +347,9 @@ module FFI
         # Attach to this module as mname/mname=
         #
         self.module_eval <<-code, __FILE__, __LINE__
-          @@ffi_gvar_#{mname} = s
+          def self.__tmp__set_#{mname}(v)
+            @@ffi_gvar_#{mname} = v
+          end
           def self.#{mname}
             @@ffi_gvar_#{mname}[:gvar]
           end
@@ -352,6 +357,7 @@ module FFI
             @@ffi_gvar_#{mname}[:gvar] = value
           end
         code
+        self.send :"__tmp__set_#{mname}", s
 
       end
 
