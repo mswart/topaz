@@ -279,10 +279,10 @@ class SignedRWStrategy(ReadWriteStrategy):
 class UnsignedRWStrategy(ReadWriteStrategy):
     def read(self, space, data):
         result = misc.read_raw_unsigned_data(data, self.typesize)
-        return space.newint(intmask(result))
+        return space.newint_or_bigint_fromunsigned(result)
 
     def write(self, space, data, w_arg):
-        arg = space.int_w(w_arg)
+        arg = w_arg.uintmask_w(space)
         misc.write_raw_unsigned_data(data, arg, self.typesize)
 
 
