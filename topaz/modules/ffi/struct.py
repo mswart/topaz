@@ -25,6 +25,10 @@ class W_StructLayout(W_Object):
     def method_size(self, space):
         return space.newint(self.struct_size)
 
+    @classdef.method('alignment')
+    def method_alignment(self, space):
+        return space.newint(self.alignment)
+
 
 class W_StructByValue(W_TypeObject):
     classdef = ClassDef('FFI::StructByValue', W_TypeObject.classdef)
