@@ -1,0 +1,1 @@
+fails:FFI::ManagedStruct  with an initialize function should call the initialize function
