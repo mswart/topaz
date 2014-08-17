@@ -100,8 +100,6 @@ class W_BufferObject(W_AbstractMemoryObject):
     def method_subscript(self, space, other):
         return self.createsubbuffer(space, other, self.sizeof_type)
 
-
-
     @classdef.method('inspect')
     def method_inspect(self, space):
         return space.newstr_fromstr("#<FFI:Buffer:%s address=%s size=%d>" %
