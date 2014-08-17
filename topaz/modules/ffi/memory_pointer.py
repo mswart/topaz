@@ -1,4 +1,5 @@
 from topaz.modules.ffi.pointer import W_PointerObject
+from topaz.modules.ffi.struct import is_struct
 from topaz.module import ClassDef
 
 from rpython.rtyper.lltypesystem import rffi
@@ -25,10 +26,13 @@ class W_MemoryPointerObject(W_PointerObject):
             w_FFI = space.find_const(space.w_kernel, 'FFI')
             w_Type = space.find_const(w_FFI, 'Type')
             self.w_type = space.find_const(w_Type, space.symbol_w(w_type_hint).upper())
-            sizeof_type = space.int_w(space.send(self.w_type, 'size'))
-            self.sizeof_memory = size * sizeof_type
+            self.sizeof_type = space.int_w(space.send(self.w_type, 'size'))
+            self.sizeof_memory = size * self.sizeof_type
         elif space.is_kind_of(w_type_hint, space.w_fixnum):
             self.sizeof_memory = space.int_w(w_type_hint)
+        elif is_struct(space, w_type_hint):
+            self.sizeof_type = space.int_w(space.send(space.send(w_type_hint, 'layout'), 'size'))
+            self.sizeof_memory = size * self.sizeof_type
         else:
             raise space.error(space.w_TypeError, 'need symbol as type hint or memory size')
         memory = lltype.malloc(rffi.CArray(rffi.CHAR),

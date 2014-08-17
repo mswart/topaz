@@ -13,7 +13,9 @@ from topaz.modules.ffi.buffer import W_BufferObject
 from topaz.modules.ffi.pointer import W_PointerObject
 from topaz.modules.ffi.memory_pointer import W_MemoryPointerObject
 from topaz.modules.ffi.data_converter import DataConverter
-from topaz.modules.ffi.struct import W_StructLayout, W_StructByValue, W_Struct
+from topaz.modules.ffi.array_type import W_ArrayTypeObject
+from topaz.modules.ffi.struct import W_StructByValue, W_Struct
+from topaz.modules.ffi.struct_layout import W_StructLayoutObject
 
 import platform
 
@@ -48,6 +50,9 @@ class FFI(object):
                         space.getclassfor(W_MemoryPointerObject))
         space.set_const(w_mod, 'DataConverter',
                         space.getmoduleobject(DataConverter.moduledef))
+        w_ArrayTypeObject = space.getclassfor(W_ArrayTypeObject)
+        space.set_const(w_mod, 'ArrayType', w_ArrayTypeObject)
+        space.set_const(w_Type, 'Array', w_ArrayTypeObject)
 
         w_native_type = space.newmodule('NativeType')
         # This assumes that FFI::Type and the type constants already exist
@@ -79,20 +84,7 @@ class FFI(object):
         space.set_const(w_mod, 'Platform', w_platform)
 
         # setup StructLayout
-        w_struct_layout = space.getclassfor(W_StructLayout)
-        w_struct_layout_field = space.newclass('Field', space.w_object)
-        space.set_const(w_struct_layout, 'Field', w_struct_layout_field)
-        space.set_const(w_struct_layout, 'Number',
-                        space.newclass('Number', w_struct_layout_field))
-        space.set_const(w_struct_layout, 'String',
-                        space.newclass('String', w_struct_layout_field))
-        space.set_const(w_struct_layout, 'Pointer',
-                        space.newclass('Pointer', w_struct_layout_field))
-        space.set_const(w_struct_layout, 'Function',
-                        space.newclass('Function', w_struct_layout_field))
-        space.set_const(w_struct_layout, 'Array',
-                        space.newclass('Array', w_struct_layout_field))
-        space.set_const(w_mod, 'StructLayout', w_struct_layout)
+        space.set_const(w_mod, 'StructLayout', space.getclassfor(W_StructLayoutObject))
 
         # setup StructByValue
         w_struct_by_value = space.getclassfor(W_StructByValue)

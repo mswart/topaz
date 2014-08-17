@@ -50,30 +50,16 @@ module FFI
       self[field_name].offset
     end
 
-    class Field
-      attr_reader :offset, :type, :name
-      def initialize(name, offset, type)
-        if !name.is_a?(Symbol) && !name.is_a?(String)
-          raise TypeError.new "wrong argument type #{name.class} (expected Symbol/String)"
-        end
-        unless offset.is_a?(Fixnum)
-          raise TypeError.new "wrong argument type #{offset.class} (expected Fixnum)"
-        end
-        unless true # type.is_a?(Class) && (type < FFI::Type)
-          $stdout.puts type.class
-          $stdout.puts type.is_a? Class
-          raise TypeError.new "wrong argument type #{type.class} (expected FFI::Type)"
-        end
-        @name, @offset, @type = name.to_sym, offset, type
-      end
+    class Number < Field
+    end
 
-      def alignment
-        size
-      end
+    class String < Field
+    end
 
-      def size
-        @type.size
-      end
+    class Pointer < Field
+    end
+
+    class Function < Field
     end
 
     # An enum {Field} in a {StructLayout}.

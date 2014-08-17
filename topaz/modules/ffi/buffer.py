@@ -1,4 +1,5 @@
 from topaz.modules.ffi.abstract_memory import W_AbstractMemoryObject
+from topaz.modules.ffi.struct import is_struct
 from topaz.module import ClassDef
 
 from rpython.rtyper.lltypesystem import rffi
@@ -8,16 +9,12 @@ from rpython.rtyper.lltypesystem import lltype
 class W_BufferObject(W_AbstractMemoryObject):
     classdef = ClassDef('FFI::Buffer', W_AbstractMemoryObject.classdef)
 
-    def __init__(self, space, klass=None):
-        W_AbstractMemoryObject.__init__(self, space, klass)
-        self.sizeof_type = 0
-        self.sizeof_memory = 0
-
     def __deepcopy__(self, memo):
         obj = super(W_BufferObject, self).__deepcopy__(memo)
         obj.ptr = self.ptr
         obj.sizeof_type = self.sizeof_type
         obj.sizeof_memory = self.sizeof_memory
+        obj.release_ptr = self.release_ptr
         return obj
 
     @classdef.singleton_method('allocate')
@@ -39,25 +36,41 @@ class W_BufferObject(W_AbstractMemoryObject):
             self.sizeof_type = space.int_w(space.send(self.w_type, 'size'))
         elif space.is_kind_of(w_type_hint, space.w_fixnum):
             self.sizeof_type = space.int_w(w_type_hint)
+        elif is_struct(space, w_type_hint):
+            self.sizeof_type = space.int_w(space.send(space.send(w_type_hint, 'layout'), 'size'))
         else:
             raise space.error(space.w_TypeError, 'need symbol as type hint or memory size')
         self.sizeof_memory = self.sizeof_type * count
         memory = lltype.malloc(rffi.CArray(rffi.CHAR),
                                self.sizeof_memory,
                                flavor='raw', zero=True)  # zero=clear, but lltype seams to not support that
+        self.release_ptr = True
         self.ptr = rffi.cast(rffi.VOIDP, memory)
         if block is not None:
             return space.invoke_block(block, [self])
 
     @classdef.method('free')
     def method_free(self, space):
-        lltype.free(self.ptr, flavor='raw')
+        if self.release_ptr:
+            lltype.free(self.ptr, flavor='raw')
+
+    def __del__(self):
+        if self.release_ptr:
+            lltype.free(self.ptr, flavor='raw')
+
+    @classdef.method('null?')
+    def method_null(self, space):
+        return space.newbool(self.ptr == lltype.nullptr(rffi.VOIDP.TO))
 
     @classdef.method('length')
     @classdef.method('total')
     @classdef.method('size')
     def method_size(self, space):
         return space.newint_or_bigint(self.sizeof_memory)
+
+    @classdef.method('type_size')
+    def method_typesize(self, space):
+        return space.newint_or_bigint(self.sizeof_type)
 
     @classdef.method('==')
     def method_eq(self, space, w_other):
@@ -66,57 +79,28 @@ class W_BufferObject(W_AbstractMemoryObject):
         else:
             return space.newbool(False)
 
-    @classdef.method('slice', size='int')
-    def method_slice(self, space, w_offset, size):
-        w_pointer = space.send(self, '+', [w_offset])
-        assert isinstance(w_pointer, W_BufferObject)
-        w_pointer.sizeof_memory = size
-        return w_pointer
+    def createsubbuffer(self, space, offset, size):
+        w_buffer = W_BufferObject(space, klass=self)
+        ptr = rffi.ptradd(rffi.cast(rffi.CCHARP, self.ptr), offset * self.sizeof_type)
+        w_buffer.ptr = rffi.cast(rffi.VOIDP, ptr)
+        w_buffer.sizeof_type = self.sizeof_type
+        w_buffer.sizeof_memory = self.sizeof_memory + (size - offset) * self.sizeof_type
+        w_buffer.release_ptr = False
+        return w_buffer
 
-        # static VALUE
-        # slice(VALUE self, long offset, long len)
-        # {
-        #     Buffer* ptr;
-        #     Buffer* result;
-        #     VALUE obj = Qnil;
-
-        #     Data_Get_Struct(self, Buffer, ptr);
-        #     checkBounds(&ptr->memory, offset, len);
-
-        #     obj = Data_Make_Struct(BufferClass, Buffer, buffer_mark, -1, result);
-        #     result->memory.address = ptr->memory.address + offset;
-        #     result->memory.size = len;
-        #     result->memory.flags = ptr->memory.flags;
-        #     result->memory.typeSize = ptr->memory.typeSize;
-        #     result->data.rbParent = self;
-
-        #     return obj;
-        # }
+    @classdef.method('slice', offset='int', size='int')
+    def method_slice(self, space, offset, size):
+        return self.createsubbuffer(space, offset, size)
 
     @classdef.method('+', other='int')
     def method_plus(self, space, other):
-        ptr = rffi.ptradd(rffi.cast(rffi.CCHARP, self.ptr), other)
-        ptr_val = rffi.cast(lltype.Unsigned, ptr)
-        w_ptr_val = space.newint_or_bigint_fromunsigned(ptr_val)
-        w_res = space.send(space.getclassfor(W_BufferObject), 'new', [w_ptr_val])
-        return w_res
+        return self.createsubbuffer(space, other, int(self.sizeof_memory / self.sizeof_type) - other)
 
-        # /*
-        #  * call-seq: + offset
-        #  * @param [Numeric] offset
-        #  * @return [Buffer] a new instance of Buffer pointing from offset until end of previous buffer.
-        #  * Add a Buffer with an offset
-        #  */
-        # static VALUE
-        # buffer_plus(VALUE self, VALUE rbOffset)
-        # {
-        #     Buffer* ptr;
-        #     long offset = NUM2LONG(rbOffset);
+    @classdef.method('[]', other='int')
+    def method_subscript(self, space, other):
+        return self.createsubbuffer(space, other, self.sizeof_type)
 
-        #     Data_Get_Struct(self, Buffer, ptr);
 
-        #     return slice(self, offset, ptr->memory.size - offset);
-        # }
 
     @classdef.method('inspect')
     def method_inspect(self, space):

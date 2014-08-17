@@ -160,8 +160,8 @@ class W_TypeObject(W_Object):
 class W_BuiltinType(W_TypeObject):
     classdef = ClassDef('Builtin', W_TypeObject.classdef)
 
-    def __init__(self, space, typeindex, rw_strategy):
-        W_TypeObject.__init__(self, space, typeindex, rw_strategy)
+    def __init__(self, space, typeindex, rw_strategy, klass=None):
+        W_TypeObject.__init__(self, space, typeindex, rw_strategy, klass=klass)
 
     @classdef.singleton_method('allocate')
     def singleton_method_allocate(self, space, args_w):

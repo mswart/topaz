@@ -15,9 +15,9 @@ def coerce_pointer(space, w_pointer):
     if isinstance(w_pointer, W_AbstractMemoryObject):
         return w_pointer.ptr
     else:
-        raise space.error(space.w_TypeError,
-                          "%s is not an FFI::Pointer." %
-                          space.str_w(space.send(w_pointer, 'inspect')))
+        w_converted = space.convert_type(w_pointer, space.getclassfor(W_AbstractMemoryObject), "to_ptr")
+        assert isinstance(w_converted, W_AbstractMemoryObject)
+        return w_converted.ptr
 
 setattr(Coerce, 'ffi_pointer', staticmethod(coerce_pointer))
 
@@ -111,7 +111,7 @@ class W_PointerObject(W_AbstractMemoryObject):
 
     @classdef.method('+', other='int')
     def method_plus(self, space, other):
-        ptr = rffi.ptradd(rffi.cast(rffi.CCHARP, self.ptr), other)
+        ptr = rffi.ptradd(rffi.cast(rffi.CCHARP, self.ptr), other * self.sizeof_type)
         ptr_val = rffi.cast(lltype.Unsigned, ptr)
         w_ptr_val = space.newint_or_bigint_fromunsigned(ptr_val)
         w_res = space.send(space.getclassfor(W_PointerObject), 'new', [w_ptr_val])

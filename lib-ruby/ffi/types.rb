@@ -189,8 +189,8 @@ module FFI
   end
 
   class Type::Struct
-    def initialize(struct)
-      @struct = struct
-    end
+    # def initialize(struct)
+    #   @struct = struct
+    # end
   end
 end
