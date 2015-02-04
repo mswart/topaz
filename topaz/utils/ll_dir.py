@@ -30,35 +30,38 @@ else:
     os_opendir = rffi.llexternal("opendir",
         [rffi.CCHARP], DIRP,
         compilation_info=eci,
-        macro=True
+        macro=True,
+        save_err=rffi.RFFI_SAVE_ERRNO
     )
     os_readdir = rffi.llexternal("readdir",
         [DIRP], DIRENTP,
         compilation_info=eci,
-        macro=True
+        macro=True,
+        save_err=rffi.RFFI_SAVE_ERRNO
     )
     os_closedir = rffi.llexternal("closedir",
         [DIRP], rffi.INT,
         compilation_info=eci,
-        macro=True
+        macro=True,
+        save_err=rffi.RFFI_SAVE_ERRNO
     )
 
     def opendir(path):
         dirp = os_opendir(path)
         if not dirp:
-            raise OSError(rposix.get_errno(), "error in opendir")
+            raise OSError(rposix.get_saved_errno(), "error in opendir")
         return dirp
 
     def closedir(dirp):
         os_closedir(dirp)
 
     def readdir(dirp):
-        rposix.set_errno(0)
+        rposix.set_saved_errno(0)
         direntp = os_readdir(dirp)
         if not direntp:
-            if rposix.get_errno() == 0:
+            if rposix.get_last_errno() == 0:
                 return None
             else:
-                raise OSError(rposix.get_errno(), "error in readdir")
+                raise OSError(rposix.get_saved_errno(), "error in readdir")
         namep = rffi.cast(rffi.CCHARP, direntp.c_d_name)
         return rffi.charp2str(namep)
