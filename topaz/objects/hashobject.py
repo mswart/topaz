@@ -1,5 +1,4 @@
-import operator
-
+from rpython.rlib import jit
 from rpython.rlib.rerased import new_static_erasing_pair
 
 from topaz.module import ClassDef, check_frozen
@@ -96,12 +95,13 @@ class ObjectDictStrategy(BaseDictStrategy, TypedDictStrategyMixin):
 
 
 class TypedArrayDictStrategyMixin(object):
-    MAX_LEN = 5
+    MAX_LEN = 3
     _mixin_ = True
 
     def get_empty_storage(self, space):
         return self.erase([])
 
+    @jit.unroll_safe
     def _getvaluepos(self, array, w_key):
         """ search for key in array"""
         pos = 0
@@ -130,7 +130,7 @@ class TypedArrayDictStrategyMixin(object):
             storage = self.fallback_stragegy.get_empty_storage(self.space)
             pos = 0
             while pos < len(array):
-                self.fallback_stragegy.setitem(storage, self.wrap(array[pos]), array[pos+1])
+                self.fallback_stragegy.setitem(storage, self.wrap(array[pos]), array[pos + 1])
                 pos += 2
             raise ReoptimizeStorageStrategy(self.fallback_stragegy, storage)
 
