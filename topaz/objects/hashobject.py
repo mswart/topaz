@@ -1,3 +1,5 @@
+import operator
+
 from rpython.rlib.rerased import new_static_erasing_pair
 
 from topaz.module import ClassDef, check_frozen
@@ -5,6 +7,12 @@ from topaz.modules.enumerable import Enumerable
 from topaz.objects.objectobject import W_Object
 from topaz.utils.ordereddict import OrderedDict
 from topaz.objects.procobject import W_ProcObject
+
+
+class ReoptimizeStorageStrategy(Exception):
+    def __init__(self, strategy, storage):
+        self.strategy = strategy
+        self.storage = storage
 
 
 class BaseDictStrategy(object):
@@ -57,9 +65,25 @@ class TypedDictStrategyMixin(object):
         return self.wrap(key), value
 
 
+class IdentityDictStrategy(BaseDictStrategy, TypedDictStrategyMixin):
+    erase, unerase = new_static_erasing_pair("IdentityDictStrategy")
+    iter_erase, iter_unerase = new_static_erasing_pair("IdentityDictStrategyIterator")
+    identity_strategy = None
+
+    def get_empty_storage(self, space):
+        return self.erase(OrderedDict())
+
+    def wrap(self, w_key):
+        return w_key
+
+    def unwrap(self, w_key):
+        return w_key
+
+
 class ObjectDictStrategy(BaseDictStrategy, TypedDictStrategyMixin):
     erase, unerase = new_static_erasing_pair("ObjectDictStrategy")
     iter_erase, iter_unerase = new_static_erasing_pair("ObjectDictStrategyIterator")
+    identity_strategy = IdentityDictStrategy
 
     def get_empty_storage(self, space):
         return self.erase(OrderedDict(space.eq_w, space.hash_w))
@@ -71,12 +95,122 @@ class ObjectDictStrategy(BaseDictStrategy, TypedDictStrategyMixin):
         return w_key
 
 
-class IdentityDictStrategy(BaseDictStrategy, TypedDictStrategyMixin):
-    erase, unerase = new_static_erasing_pair("IdentityDictStrategy")
-    iter_erase, iter_unerase = new_static_erasing_pair("IdentityDictStrategyIterator")
+class TypedArrayDictStrategyMixin(object):
+    MAX_LEN = 5
+    _mixin_ = True
 
     def get_empty_storage(self, space):
-        return self.erase(OrderedDict())
+        return self.erase([])
+
+    def _getvaluepos(self, array, w_key):
+        """ search for key in array"""
+        pos = 0
+        while pos < len(array):
+            if self.eq_func(array[pos], w_key):
+                return pos + 1
+            pos += 2
+        return -1
+
+    def getitem(self, storage, w_key):
+        array = self.unerase(storage)
+        valuepos = self._getvaluepos(array, w_key)
+        if valuepos < 0:
+            raise KeyError
+        return self.wrap(array[valuepos])
+
+    def setitem(self, storage, w_key, w_value):
+        array = self.unerase(storage)
+        valuepos = self._getvaluepos(array, w_key)
+        if valuepos >= 0:
+            array[valuepos] = self.unwrap(w_value)
+        elif len(array) < self.MAX_LEN * 2:
+            array.append(w_key)
+            array.append(w_value)
+        else:
+            storage = self.fallback_stragegy.get_empty_storage(self.space)
+            pos = 0
+            while pos < len(array):
+                self.fallback_stragegy.setitem(storage, self.wrap(array[pos]), array[pos+1])
+                pos += 2
+            raise ReoptimizeStorageStrategy(self.fallback_stragegy, storage)
+
+    def contains(self, storage, w_key):
+        array = self.unerase(storage)
+        valuepos = self._getvaluepos(array, w_key)
+        return valuepos >= 0
+
+    def copy(self, storage):
+        return self.erase(self.unerase(storage)[:])
+
+    def clear(self, storage):
+        raise ReoptimizeStorageStrategy(self, self.erase([]))
+
+    def len(self, storage):
+        return len(self.unerase(storage)) >> 1
+
+    def bool(self, storage):
+        return bool(self.unerase(storage))
+
+    def pop(self, storage, w_key, default):
+        array = self.unerase(storage)
+        valuepos = self._getvaluepos(array, w_key)
+        if valuepos > 0:
+            value = array.pop(valuepos)
+            array.pop(valuepos - 1)  # remove key
+            return value
+        else:
+            return default
+
+    def popitem(self, storage):
+        array = self.unerase(storage)
+        if len(array) < 0:
+            raise KeyError()
+        value = array.pop()
+        key = array.pop()
+        return self.wrap(key), value
+
+    def keys(self, storage):
+        return [self.wrap(obj) for pos, obj in enumerate(self.unerase(storage)) if pos % 2 == 0]
+
+    def values(self, storage):
+        return [obj for pos, obj in enumerate(self.unerase(storage)) if pos % 2 == 1]
+
+    def iteritems(self, storage):
+        return self.iter_erase(iter(self.unerase(storage)))
+
+    def iternext(self, storage):
+        iter = self.iter_unerase(storage)
+        key = iter.next()
+        value = iter.next()
+        return self.wrap(key), value
+
+
+class IdentityArrayDictStrategy(BaseDictStrategy, TypedArrayDictStrategyMixin):
+    erase, unerase = new_static_erasing_pair("IdentityArrayDictStrategy")
+    iter_erase, iter_unerase = new_static_erasing_pair("IdentityArrayDictStrategyIterator")
+    identity_strategy = None
+
+    def __init__(self, space):
+        self.eq_func = lambda a, b: a == b
+        self.fallback_stragegy = space.fromcache(IdentityDictStrategy)
+        self.space = space
+
+    def wrap(self, w_key):
+        return w_key
+
+    def unwrap(self, w_key):
+        return w_key
+
+
+class ObjectArrayDictStrategy(BaseDictStrategy, TypedArrayDictStrategyMixin):
+    erase, unerase = new_static_erasing_pair("ObjectArrayDictStrategy")
+    iter_erase, iter_unerase = new_static_erasing_pair("ObjectArrayDictStrategyIterator")
+    identity_strategy = IdentityArrayDictStrategy
+
+    def __init__(self, space):
+        self.eq_func = space.eq_w
+        self.fallback_stragegy = space.fromcache(ObjectDictStrategy)
+        self.space = space
 
     def wrap(self, w_key):
         return w_key
@@ -91,7 +225,7 @@ class W_HashObject(W_Object):
 
     def __init__(self, space, klass=None):
         W_Object.__init__(self, space, klass)
-        self.strategy = space.fromcache(ObjectDictStrategy)
+        self.strategy = space.fromcache(ObjectArrayDictStrategy)
         self.dict_storage = self.strategy.get_empty_storage(space)
         self.w_default = space.w_nil
         self.default_proc = None
@@ -144,7 +278,11 @@ class W_HashObject(W_Object):
     @classdef.method("compare_by_identity")
     @check_frozen()
     def method_compare_by_identity(self, space):
-        strategy = space.fromcache(IdentityDictStrategy)
+        strategy_cls = self.strategy.identity_strategy
+        if strategy_cls is None:
+            strategy = self.strategy
+        else:
+            strategy = space.fromcache(strategy_cls)
         storage = strategy.get_empty_storage(space)
 
         iter = self.strategy.iteritems(self.dict_storage)
@@ -153,19 +291,24 @@ class W_HashObject(W_Object):
                 w_key, w_value = self.strategy.iternext(iter)
             except StopIteration:
                 break
-            strategy.setitem(storage, w_key, w_value)
+            try:
+                strategy.setitem(storage, w_key, w_value)
+            except ReoptimizeStorageStrategy as e:
+                strategy = e.strategy
+                storage = e.storage
         self.strategy = strategy
         self.dict_storage = storage
         return self
 
     @classdef.method("compare_by_identity?")
     def method_compare_by_identityp(self, space):
-        return space.newbool(self.strategy is space.fromcache(IdentityDictStrategy))
+        return space.newbool(self.strategy.identity_strategy is None)
 
     @classdef.method("rehash")
     @check_frozen()
     def method_rehash(self, space):
         storage = self.strategy.get_empty_storage(space)
+        strategy = self.strategy
 
         iter = self.strategy.iteritems(self.dict_storage)
         while True:
@@ -173,7 +316,12 @@ class W_HashObject(W_Object):
                 w_key, w_value = self.strategy.iternext(iter)
             except StopIteration:
                 break
-            self.strategy.setitem(storage, w_key, w_value)
+            try:
+                strategy.setitem(storage, w_key, w_value)
+            except ReoptimizeStorageStrategy as e:
+                strategy = e.strategy
+                storage = e.storage
+        self.strategy = strategy
         self.dict_storage = storage
         return self
 
@@ -205,7 +353,11 @@ class W_HashObject(W_Object):
 
             w_key = space.send(w_key, "dup")
             w_key = space.send(w_key, "freeze")
-        self.strategy.setitem(self.dict_storage, w_key, w_value)
+        try:
+            self.strategy.setitem(self.dict_storage, w_key, w_value)
+        except ReoptimizeStorageStrategy as e:
+            self.strategy = e.strategy
+            self.dict_storage = e.storage
         return w_value
 
     @classdef.method("length")
@@ -230,7 +382,11 @@ class W_HashObject(W_Object):
     @classdef.method("clear")
     @check_frozen()
     def method_clear(self, space):
-        self.strategy.clear(self.dict_storage)
+        try:
+            self.strategy.clear(self.dict_storage)
+        except ReoptimizeStorageStrategy as e:
+            self.strategy = e.strategy
+            self.dict_storage = e.storage
         return self
 
     @classdef.method("shift")
