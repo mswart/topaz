@@ -59,7 +59,7 @@ else:
         rposix.set_saved_errno(0)
         direntp = os_readdir(dirp)
         if not direntp:
-            if rposix.get_last_errno() == 0:
+            if rposix.get_saved_errno() == 0:
                 return None
             else:
                 raise OSError(rposix.get_saved_errno(), "error in readdir")
