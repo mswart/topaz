@@ -132,6 +132,7 @@ class TypedArrayDictStrategyMixin(object):
             while pos < len(array):
                 self.fallback_stragegy.setitem(storage, self.wrap(array[pos]), array[pos + 1])
                 pos += 2
+            self.fallback_stragegy.setitem(storage, w_key, w_value)
             raise ReoptimizeStorageStrategy(self.fallback_stragegy, storage)
 
     def contains(self, storage, w_key):
